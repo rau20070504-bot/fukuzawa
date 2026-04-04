@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a56db">
+<title>業務管理</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1a56db;
+    --blue-light: #e8f0fe;
+    --blue-dark: #1341a0;
+    --green: #057a55;
+    --green-light: #def7ec;
+    --red: #c81e1e;
+    --red-light: #fde8e8;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-lg: 0 4px 6px rgba(0,0,0,.1), 0 2px 4px rgba(0,0,0,.06);
+    --radius: 12px;
+    --nav-h: 64px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-900);
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── レイアウト ── */
+  #app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; position: relative; background: white; box-shadow: var(--shadow-lg); }
+  #header { background: var(--blue); color: white; padding: 12px 16px 10px; flex-shrink: 0; }
+  #header h1 { font-size: 18px; font-weight: 700; letter-spacing: .03em; }
+  #header p  { font-size: 12px; opacity: .8; margin-top: 2px; }
+  #main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--nav-h) + 8px); }
+  #nav { position: sticky; bottom: 0; background: white; border-top: 1px solid var(--gray-200); display: flex; height: var(--nav-h); flex-shrink: 0; z-index: 100; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: none; background: none; font-size: 10px; color: var(--gray-500); cursor: pointer; transition: color .15s; padding: 8px 4px; }
+  .nav-btn.active { color: var(--blue); }
+  .nav-btn svg { width: 24px; height: 24px; }
+
+  /* ── タブパネル ── */
+  .tab { display: none; padding: 16px; }
+  .tab.active { display: block; }
+
+  /* ── カード ── */
+  .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 12px; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--gray-700); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card-title span.badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .badge-blue  { background: var(--blue-light); color: var(--blue); }
+  .badge-green { background: var(--green-light); color: var(--green); }
+
+  /* ── フォーム ── */
+  .form-row { margin-bottom: 14px; }
+  .form-row label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+  .form-row input,
+  .form-row select,
+  .form-row textarea {
+    width: 100%; border: 1.5px solid var(--gray-300); border-radius: 8px;
+    padding: 10px 12px; font-size: 15px; color: var(--gray-900);
+    background: var(--gray-50); transition: border-color .15s, box-shadow .15s;
+    font-family: inherit; min-height: 44px;
+  }
+  .form-row input:focus,
+  .form-row select:focus,
+  .form-row textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(26,86,219,.15); background: white; }
+  .form-row textarea { resize: vertical; min-height: 80px; }
+  .form-row.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .calc-box { background: var(--blue-light); border-radius: 8px; padding: 12px 14px; display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .calc-item { font-size: 13px; color: var(--blue-dark); }
+  .calc-item strong { display: block; font-size: 17px; font-weight: 700; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; padding: 12px 20px; min-height: 48px; transition: filter .15s, transform .08s; font-family: inherit; width: 100%; }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--blue); color: white; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-danger  { background: var(--red-light); color: var(--red); }
+  .btn-ghost   { background: var(--gray-100); color: var(--gray-700); }
+  .btn-line    { background: #06C755; color: white; }
+  .btn-sm { font-size: 13px; padding: 7px 12px; min-height: 36px; width: auto; border-radius: 6px; }
+
+  /* ── 一覧 ── */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+  .filter-row select { flex: 1; }
+  .filter-row label { font-size: 13px; font-weight: 600; color: var(--gray-700); white-space: nowrap; }
+
+  .record-list { display: flex; flex-direction: column; gap: 8px; }
+  .record-item { background: white; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; cursor: pointer; transition: box-shadow .15s; border-left: 4px solid var(--blue); }
+  .record-item.report-item { border-left-color: var(--green); }
+  .record-item:active { box-shadow: var(--shadow-lg); }
+  .record-item .ri-date { font-size: 13px; color: var(--gray-500); margin-bottom: 4px; }
+  .record-item .ri-main { font-size: 15px; font-weight: 600; color: var(--gray-900); }
+  .record-item .ri-sub  { font-size: 13px; color: var(--gray-500); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty-msg { text-align: center; padding: 40px 16px; color: var(--gray-500); font-size: 14px; }
+
+  /* ── モーダル ── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 20px 16px 32px; width: 100%; max-height: 92dvh; overflow-y: auto; transform: translateY(100%); transition: transform .25s ease; max-width: 480px; margin: 0 auto; }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-header h2 { font-size: 17px; font-weight: 700; }
+  .modal-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--gray-100); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; line-height: 1; color: var(--gray-700); }
+
+  /* 詳細表示 */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .detail-item { background: var(--gray-50); border-radius: 8px; padding: 10px 12px; }
+  .detail-item.full { grid-column: 1/-1; }
+  .detail-item label { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; display: block; }
+  .detail-item p { font-size: 15px; font-weight: 600; color: var(--gray-900); white-space: pre-wrap; word-break: break-word; }
+  .detail-item p.large { font-size: 20px; color: var(--blue); }
+  .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+
+  /* ── 月サマリー ── */
+  .summary-card { background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%); color: white; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .summary-card h3 { font-size: 13px; opacity: .8; margin-bottom: 8px; }
+  .summary-nums { display: flex; gap: 20px; flex-wrap: wrap; }
+  .summary-num { }
+  .summary-num span { font-size: 11px; opacity: .8; display: block; }
+  .summary-num strong { font-size: 22px; font-weight: 700; }
+  .summary-num small { font-size: 13px; }
+
+  /* ── セクションタイトル ── */
+  .section-sep { font-size: 12px; font-weight: 700; color: var(--gray-500); letter-spacing: .06em; text-transform: uppercase; padding: 8px 0 6px; border-bottom: 1px solid var(--gray-200); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <h1>業務管理</h1>
+    <p id="header-date"></p>
+  </div>
+
+  <div id="main">
+    <!-- ===== 出勤簿タブ ===== -->
+    <div class="tab active" id="tab-attendance">
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>出勤簿を登録</span>
+          <span class="badge badge-blue">新規</span>
+        </div>
+        <form id="form-attendance">
+          <div class="form-row">
+            <label>日付</label>
+            <input type="date" id="att-date" required>
+          </div>
+          <div class="form-row row2">
+            <div>
+              <label>出勤時刻</label>
+              <input type="time" id="att-start">
+            </div>
+            <div>
+              <label>退勤時刻</label>
+              <input type="time" id="att-end">
+            </div>
+          </div>
+
+          <div class="calc-box" id="att-calc" style="display:none">
+            <div class="calc-item"><span>実働時間</span><strong id="att-work-display">—</strong></div>
+            <div class="calc-item"><span>残業時間</span><strong id="att-ot-display">—</strong></div>
+          </div>
+          <div class="form-row">
+            <label>作業内容</label>
+            <textarea id="att-work" placeholder="本日実施した作業を記入" rows="4"></textarea>
+          </div>
+          <div class="form-row">
+            <label>備考</label>
+            <textarea id="att-note" placeholder="有給・遅刻・早退など" rows="2"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">登録する</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== 業務日報タブ ===== -->
+    <div class="tab" id="tab-report">
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>業務日報を登録</span>
+          <span class="badge badge-green">新規</span>
+        </div>
+        <form id="form-report">
+          <div class="form-row">
+            <label>日付</label>
+            <input type="date" id="rep-date" required>
+          </div>
+          <div class="form-row">
+            <label>本日の作業内容</label>
+            <textarea id="rep-work" placeholder="実施した業務を記入" rows="4"></textarea>
+          </div>
+          <div class="form-row">
+            <label>翌日の予定</label>
+            <textarea id="rep-next" placeholder="明日行う予定の業務" rows="3"></textarea>
+          </div>
+          <div class="form-row">
+            <label>所感・メモ</label>
+            <textarea id="rep-note" placeholder="気づき、課題など" rows="2"></textarea>
+          </div>
+          <div class="form-row">
+            <label>作業時間合計（分）</label>
+            <input type="number" id="rep-minutes" placeholder="480" min="0">
+          </div>
+          <button type="submit" class="btn btn-primary">登録する</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== 履歴タブ ===== -->
+    <div class="tab" id="tab-history">
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:10px">データのバックアップ</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" id="btn-export" style="flex:1">書き出す</button>
+          <label class="btn btn-ghost btn-sm" style="flex:1;cursor:pointer">読み込む<input type="file" id="inp-import" accept=".json" style="display:none"></label>
+        </div>
+      </div>
+      <div class="filter-row">
+        <label>月</label>
+        <select id="hist-month"></select>
+        <select id="hist-type">
+          <option value="all">すべて</option>
+          <option value="att">出勤簿</option>
+          <option value="rep">日報</option>
+        </select>
+      </div>
+      <div id="hist-summary"></div>
+      <div class="section-sep" id="hist-section-label">記録</div>
+      <div class="record-list" id="hist-list"></div>
+    </div>
+  </div>
+
+  <!-- ボトムナビ -->
+  <nav id="nav">
+    <button class="nav-btn active" data-tab="attendance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      出勤簿
+    </button>
+    <button class="nav-btn" data-tab="report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      業務日報
+    </button>
+    <button class="nav-btn" data-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      履歴
+    </button>
+  </nav>
+</div>
+
+<!-- ===== 詳細モーダル ===== -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">詳細</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────
+// ユーティリティ
+// ─────────────────────────────
+const today = () => new Date().toISOString().slice(0,10);
+const fmtDate = d => {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  const dow = ['日','月','火','水','木','金','土'][new Date(d).getDay()];
+  return `${y}年${m}月${day}日（${dow}）`;
+};
+const fmtTime = t => t || '—';
+const pad = n => String(n).padStart(2,'0');
+const minsToHM = m => m == null || m < 0 ? '—' : `${Math.floor(m/60)}時間${pad(m%60)}分`;
+
+function calcWork(start, end, breakMin) {
+  if (!start || !end) return null;
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  let total = (eh*60+em) - (sh*60+sm);
+  if (total < 0) total += 24*60; // 日跨ぎ
+  const work = total - (breakMin || 0);
+  return work;
+}
+
+// ─────────────────────────────
+// ストレージ
+// ─────────────────────────────
+const ATT_KEY = 'fukuzawa_attendance';
+const REP_KEY = 'fukuzawa_report';
+const load = key => JSON.parse(localStorage.getItem(key) || '[]');
+
+// ─────────────────────────────
+// エクスポート / インポート
+// ─────────────────────────────
+document.getElementById('btn-export').addEventListener('click', () => {
+  const data = { att: load(ATT_KEY), rep: load(REP_KEY), exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fukuzawa_backup_' + today() + '.json';
+  a.click();
+});
+
+document.getElementById('inp-import').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.att) save(ATT_KEY, data.att);
+      if (data.rep) save(REP_KEY, data.rep);
+      alert('読み込みが完了しました。');
+      renderHistory();
+    } catch { alert('ファイルが正しくありません。'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
+
+// ─────────────────────────────
+// ヘッダー日付
+// ─────────────────────────────
+document.getElementById('header-date').textContent = fmtDate(today());
+
+// ─────────────────────────────
+// ナビゲーション
+// ─────────────────────────────
+const navBtns = document.querySelectorAll('.nav-btn');
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    const tab = document.getElementById('tab-' + btn.dataset.tab);
+    tab.classList.add('active');
+    if (btn.dataset.tab === 'history') renderHistory();
+  });
+});
+
+// ─────────────────────────────
+// 出勤簿フォーム
+// ─────────────────────────────
+document.getElementById('att-date').value = today();
+
+const attStart = document.getElementById('att-start');
+const attEnd   = document.getElementById('att-end');
+const attBreak = document.getElementById('att-break');
+const attCalc  = document.getElementById('att-calc');
+const attWorkD = document.getElementById('att-work-display');
+const attOtD   = document.getElementById('att-ot-display');
+
+function updateCalc() {
+  const work = calcWork(attStart.value, attEnd.value, 0);
+  if (work !== null) {
+    attCalc.style.display = 'flex';
+    attWorkD.textContent = minsToHM(work);
+    const ot = Math.max(0, work - 480);
+    attOtD.textContent = ot > 0 ? minsToHM(ot) : '0分';
+  } else {
+    attCalc.style.display = 'none';
+  }
+}
+[attStart, attEnd].forEach(el => el.addEventListener('input', updateCalc));
+
+document.getElementById('form-attendance').addEventListener('submit', e => {
+  e.preventDefault();
+  const date = document.getElementById('att-date').value;
+  if (!date) return;
+  const list = load(ATT_KEY);
+  const existing = list.findIndex(r => r.date === date);
+  const record = {
+    id: existing >= 0 ? list[existing].id : Date.now(),
+    date,
+    start: attStart.value,
+    end: attEnd.value,
+    workContent: document.getElementById('att-work').value.trim(),
+    note: document.getElementById('att-note').value.trim(),
+    work: calcWork(attStart.value, attEnd.value, 0)
+  };
+  if (existing >= 0) {
+    if (!confirm('この日の出勤記録が既にあります。上書きしますか？')) return;
+    list[existing] = record;
+  } else {
+    list.push(record);
+  }
+  save(ATT_KEY, list);
+  showToast('出勤記録を保存しました');
+  e.target.reset();
+  document.getElementById('att-date').value = today();
+  attCalc.style.display = 'none';
+});
+
+// ─────────────────────────────
+// 業務日報フォーム
+// ─────────────────────────────
+document.getElementById('rep-date').value = today();
+
+document.getElementById('form-report').addEventListener('submit', e => {
+  e.preventDefault();
+  const date = document.getElementById('rep-date').value;
+  if (!date) return;
+  const list = load(REP_KEY);
+  const existing = list.findIndex(r => r.date === date);
+  const record = {
+    id: existing >= 0 ? list[existing].id : Date.now(),
+    date,
+
+    work: document.getElementById('rep-work').value.trim(),
+    next: document.getElementById('rep-next').value.trim(),
+    note: document.getElementById('rep-note').value.trim(),
+    minutes: Number(document.getElementById('rep-minutes').value) || 0
+  };
+  if (existing >= 0) {
+    if (!confirm('この日の日報が既にあります。上書きしますか？')) return;
+    list[existing] = record;
+  } else {
+    list.push(record);
+  }
+  save(REP_KEY, list);
+  showToast('日報を保存しました');
+  e.target.reset();
+  document.getElementById('rep-date').value = today();
+});
+
+// ─────────────────────────────
+// 履歴一覧
+// ─────────────────────────────
+function getMonthList() {
+  const months = new Set();
+  load(ATT_KEY).forEach(r => months.add(r.date.slice(0,7)));
+  load(REP_KEY).forEach(r => months.add(r.date.slice(0,7)));
+  return [...months].sort().reverse();
+}
+
+function renderHistory() {
+  const months = getMonthList();
+  const sel = document.getElementById('hist-month');
+  const cur = sel.value;
+  sel.innerHTML = months.map(m => `<option value="${m}">${m.replace('-','年')}月</option>`).join('');
+  if (cur && months.includes(cur)) sel.value = cur;
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const month = document.getElementById('hist-month').value;
+  const type  = document.getElementById('hist-type').value;
+  if (!month) {
+    document.getElementById('hist-list').innerHTML = '<p class="empty-msg">記録がありません</p>';
+    document.getElementById('hist-summary').innerHTML = '';
+    return;
+  }
+  const attAll = load(ATT_KEY).filter(r => r.date.startsWith(month)).sort((a,b)=>a.date<b.date?1:-1);
+  const repAll = load(REP_KEY).filter(r => r.date.startsWith(month)).sort((a,b)=>a.date<b.date?1:-1);
+
+  // サマリー
+  const totalDays = attAll.length;
+  const totalWork = attAll.reduce((s,r)=>s+(r.work||0),0);
+  const totalOT   = attAll.reduce((s,r)=>s+Math.max(0,(r.work||0)-480),0);
+  const [y,m] = month.split('-');
+  document.getElementById('hist-summary').innerHTML = `
+    <div class="summary-card">
+      <h3>${y}年${m}月 サマリー</h3>
+      <div class="summary-nums">
+        <div class="summary-num"><span>出勤日数</span><strong>${totalDays}</strong><small> 日</small></div>
+        <div class="summary-num"><span>総実働</span><strong>${Math.floor(totalWork/60)}</strong><small> 時間${pad(totalWork%60)}分</small></div>
+        <div class="summary-num"><span>残業</span><strong>${Math.floor(totalOT/60)}</strong><small> 時間${pad(totalOT%60)}分</small></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-sm" style="background:#06C755;color:white;flex:1;border:none" onclick="generateMonthlyPDF('${month}')">
+          📄 PDF作成・LINE送信
+        </button>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4)" onclick="copyMonthlyReport('${month}')">
+          📋
+        </button>
+      </div>
+    </div>`;
+
+  let items = [];
+  if (type !== 'rep') items = items.concat(attAll.map(r => ({...r, _type:'att'})));
+  if (type !== 'att') items = items.concat(repAll.map(r => ({...r, _type:'rep'})));
+  items.sort((a,b) => a.date < b.date ? 1 : -1);
+
+  const list = document.getElementById('hist-list');
+  if (!items.length) {
+    list.innerHTML = '<p class="empty-msg">この月の記録はありません</p>';
+    return;
+  }
+  list.innerHTML = items.map(r => {
+    if (r._type === 'att') {
+      return `<div class="record-item" data-type="att" data-id="${r.id}">
+        <div class="ri-date">${fmtDate(r.date)} ・ 出勤簿</div>
+        <div class="ri-main">${fmtTime(r.start)} 〜 ${fmtTime(r.end)}</div>
+        <div class="ri-sub">実働 ${minsToHM(r.work)}${r.note?' ／ '+r.note:''}</div>
+      </div>`;
+    } else {
+      return `<div class="record-item report-item" data-type="rep" data-id="${r.id}">
+        <div class="ri-date">${fmtDate(r.date)} ・ 業務日報</div>
+        <div class="ri-main">${r.work ? r.work.split('\n')[0] : '（内容なし）'}</div>
+        <div class="ri-sub">${r.next ? '翌日: '+r.next.split('\n')[0] : ''}</div>
+      </div>`;
+    }
+  }).join('');
+
+  list.querySelectorAll('.record-item').forEach(el => {
+    el.addEventListener('click', () => openModal(el.dataset.type, Number(el.dataset.id)));
+  });
+}
+
+document.getElementById('hist-month').addEventListener('change', renderHistoryList);
+document.getElementById('hist-type').addEventListener('change', renderHistoryList);
+
+// ─────────────────────────────
+// 月次レポート生成・LINE送信・PDF
+// ─────────────────────────────
+function buildMonthlyText(month) {
+  const [y, m] = month.split('-');
+  const attAll = load(ATT_KEY).filter(r => r.date.startsWith(month)).sort((a,b)=>a.date>b.date?1:-1);
+  const repAll = load(REP_KEY).filter(r => r.date.startsWith(month)).sort((a,b)=>a.date>b.date?1:-1);
+
+  const totalDays = attAll.length;
+  const totalWork = attAll.reduce((s,r)=>s+(r.work||0),0);
+  const totalOT   = attAll.reduce((s,r)=>s+Math.max(0,(r.work||0)-480),0);
+
+  const lines = [];
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(`📊 ${y}年${m}月 月次レポート`);
+  lines.push('━━━━━━━━━━━━━━━━');
+  lines.push(`出勤日数　：${totalDays}日`);
+  lines.push(`総実働時間：${minsToHM(totalWork)}`);
+  lines.push(`残業時間　：${totalOT > 0 ? minsToHM(totalOT) : 'なし'}`);
+
+  if (attAll.length > 0) {
+    lines.push('');
+    lines.push('【出勤記録】');
+    attAll.forEach(r => {
+      const dow = ['日','月','火','水','木','金','土'][new Date(r.date).getDay()];
+      const [,, dd] = r.date.split('-');
+      const ot = Math.max(0,(r.work||0)-480);
+      let row = `${dd}日(${dow}) ${fmtTime(r.start)}〜${fmtTime(r.end)} 実働${minsToHM(r.work)}`;
+      if (ot > 0) row += ` 残業${minsToHM(ot)}`;
+      if (r.note) row += ` (${r.note})`;
+      lines.push(row);
+      if (r.workContent) lines.push('  作業内容: ' + r.workContent);
+    });
+  }
+
+  if (repAll.length > 0) {
+    lines.push('');
+    lines.push('【業務日報】');
+    repAll.forEach(r => {
+      const dow = ['日','月','火','水','木','金','土'][new Date(r.date).getDay()];
+      const [,, dd] = r.date.split('-');
+      lines.push(`▶ ${dd}日(${dow})`);
+      if (r.work)  lines.push('  作業内容: ' + r.work);
+      if (r.next)  lines.push('  翌日予定: ' + r.next);
+      if (r.note)  lines.push('  所感: ' + r.note);
+      if (r.minutes) lines.push('  作業時間: ' + minsToHM(r.minutes));
+    });
+  }
+
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━');
+  return lines.join('\n');
+}
+
+function sendMonthlyToLine(month) {
+  if (!month) return;
+  const text = buildMonthlyText(month);
+  const url  = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+  window.open(url, '_blank');
+}
+
+function copyMonthlyReport(month) {
+  if (!month) return;
+  const text = buildMonthlyText(month);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('月次レポートをコピーしました');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('月次レポートをコピーしました');
+  });
+}
+
+function generateMonthlyPDF(month) {
+  if (!month) return;
+  const [y, m] = month.split('-');
+  const attAll = load(ATT_KEY).filter(r => r.date.startsWith(month)).sort((a,b)=>a.date>b.date?1:-1);
+  const repAll = load(REP_KEY).filter(r => r.date.startsWith(month)).sort((a,b)=>a.date>b.date?1:-1);
+  const totalDays = attAll.length;
+  const totalWork = attAll.reduce((s,r)=>s+(r.work||0),0);
+  const totalOT   = attAll.reduce((s,r)=>s+Math.max(0,(r.work||0)-480),0);
+
+  const attRows = attAll.map(r => {
+    const dow = ['日','月','火','水','木','金','土'][new Date(r.date).getDay()];
+    const [,,dd] = r.date.split('-');
+    const ot = Math.max(0,(r.work||0)-480);
+    return `<tr>
+      <td>${dd}日(${dow})</td>
+      <td>${fmtTime(r.start)}</td>
+      <td>${fmtTime(r.end)}</td>
+      <td><strong>${minsToHM(r.work)}</strong></td>
+      <td>${ot>0?minsToHM(ot):'―'}</td>
+      <td style="white-space:pre-wrap">${r.workContent||'―'}</td>
+      <td>${r.note||'―'}</td>
+    </tr>`;
+  }).join('');
+
+  const repRows = repAll.map(r => {
+    const dow = ['日','月','火','水','木','金','土'][new Date(r.date).getDay()];
+    const [,,dd] = r.date.split('-');
+    return `<tr>
+      <td>${dd}日(${dow})</td>
+      <td style="white-space:pre-wrap">${r.work||'―'}</td>
+      <td style="white-space:pre-wrap">${r.next||'―'}</td>
+      <td style="white-space:pre-wrap">${r.note||'―'}</td>
+      <td>${r.minutes?minsToHM(r.minutes):'―'}</td>
+    </tr>`;
+  }).join('');
+
+  const lineText = encodeURIComponent(buildMonthlyText(month));
+
+  const html = `<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<title>${y}年${m}月 月次レポート</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;font-size:11px;color:#111;padding:16px}
+  h1{font-size:16px;margin-bottom:4px;color:#1a56db}
+  .meta{font-size:11px;color:#555;margin-bottom:16px}
+  .summary{display:flex;gap:24px;background:#e8f0fe;border-radius:8px;padding:10px 16px;margin-bottom:20px}
+  .s-item{text-align:center}
+  .s-item span{display:block;font-size:10px;color:#555}
+  .s-item strong{font-size:16px;color:#1a56db}
+  h2{font-size:13px;border-left:4px solid #1a56db;padding-left:8px;margin:16px 0 8px;color:#1a56db}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  th{background:#1a56db;color:white;padding:6px 8px;font-size:10px;text-align:left;white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top;font-size:10px}
+  tr:nth-child(even) td{background:#f9fafb}
+  .action-bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #e5e7eb;padding:10px 16px;display:flex;gap:8px;z-index:100}
+  .btn{flex:1;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-print{background:#1a56db;color:white}
+  .btn-line{background:#06C755;color:white}
+  @media print{.action-bar{display:none}body{padding:8px}}
+</style>
+</head><body>
+<h1>📊 ${y}年${m}月 月次レポート</h1>
+<p class="meta">作成日：${fmtDate(today())}</p>
+<div class="summary">
+  <div class="s-item"><span>出勤日数</span><strong>${totalDays}日</strong></div>
+  <div class="s-item"><span>総実働時間</span><strong>${minsToHM(totalWork)}</strong></div>
+  <div class="s-item"><span>残業時間</span><strong>${totalOT>0?minsToHM(totalOT):'なし'}</strong></div>
+</div>
+
+${attAll.length>0?`<h2>出勤記録</h2>
+<table>
+  <thead><tr><th>日付</th><th>出勤</th><th>退勤</th><th>実働時間</th><th>残業</th><th>作業内容</th><th>備考</th></tr></thead>
+  <tbody>${attRows}</tbody>
+</table>`:''}
+
+${repAll.length>0?`<h2>業務日報</h2>
+<table>
+  <thead><tr><th>日付</th><th>作業内容</th><th>翌日の予定</th><th>所感・メモ</th><th>作業時間</th></tr></thead>
+  <tbody>${repRows}</tbody>
+</table>`:''}
+
+<div class="action-bar">
+  <button class="btn btn-print" onclick="window.print()">📄 PDFとして保存</button>
+  <button class="btn btn-line" onclick="window.open('https://line.me/R/msg/text/?${lineText}','_blank')">📤 LINEで送る</button>
+</div>
+</body></html>`;
+
+  const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+// ─────────────────────────────
+// モーダル（詳細・編集・削除）
+// ─────────────────────────────
+const overlay = document.getElementById('modal-overlay');
+const modal   = document.getElementById('modal');
+
+function openModal(type, id) {
+  const list = load(type === 'att' ? ATT_KEY : REP_KEY);
+  const rec  = list.find(r => r.id === id);
+  if (!rec) return;
+
+  document.getElementById('modal-title').textContent = type === 'att' ? '出勤記録の詳細' : '業務日報の詳細';
+  const body = document.getElementById('modal-body');
+
+  if (type === 'att') {
+    const ot = Math.max(0, (rec.work||0) - 480);
+    body.innerHTML = `
+      <div class="detail-grid">
+        <div class="detail-item full"><label>日付</label><p>${fmtDate(rec.date)}</p></div>
+        <div class="detail-item"><label>出勤</label><p class="large">${fmtTime(rec.start)}</p></div>
+        <div class="detail-item"><label>退勤</label><p class="large">${fmtTime(rec.end)}</p></div>
+        <div class="detail-item"><label>実働時間</label><p>${minsToHM(rec.work)}</p></div>
+        <div class="detail-item full"><label>残業時間</label><p>${ot>0?minsToHM(ot):'なし'}</p></div>
+        ${rec.workContent?`<div class="detail-item full"><label>作業内容</label><p>${esc(rec.workContent)}</p></div>`:''}
+        ${rec.note?`<div class="detail-item full"><label>備考</label><p>${esc(rec.note)}</p></div>`:''}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-line btn-sm" onclick="copyToLine('att',${id})">LINEにコピー</button>
+        <button class="btn btn-ghost btn-sm" onclick="editRecord('att',${id})">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('att',${id})">削除</button>
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <div class="detail-grid">
+        <div class="detail-item full"><label>日付</label><p>${fmtDate(rec.date)}</p></div>
+        <div class="detail-item full"><label>作業内容</label><p>${esc(rec.work)||'—'}</p></div>
+        <div class="detail-item full"><label>翌日の予定</label><p>${esc(rec.next)||'—'}</p></div>
+        ${rec.note?`<div class="detail-item full"><label>所感・メモ</label><p>${esc(rec.note)}</p></div>`:''}
+        ${rec.minutes?`<div class="detail-item full"><label>作業時間合計</label><p>${minsToHM(rec.minutes)}</p></div>`:''}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-line btn-sm" onclick="copyToLine('rep',${id})">LINEにコピー</button>
+        <button class="btn btn-ghost btn-sm" onclick="editRecord('rep',${id})">編集</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRecord('rep',${id})">削除</button>
+      </div>`;
+  }
+  overlay.classList.add('open');
+}
+
+function closeModal() { overlay.classList.remove('open'); }
+document.getElementById('modal-close').addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function copyToLine(type, id) {
+  const rec = load(type === 'att' ? ATT_KEY : REP_KEY).find(r => r.id === id);
+  if (!rec) return;
+  let text;
+  if (type === 'att') {
+    const ot = Math.max(0, (rec.work||0) - 480);
+    text = [
+      '【出勤記録】',
+      '📅 ' + fmtDate(rec.date),
+      '🕐 出勤：' + fmtTime(rec.start),
+      '🕐 退勤：' + fmtTime(rec.end),
+      '☕ 休憩：' + (rec.breakMin||0) + '分',
+      '⏱ 実働：' + minsToHM(rec.work),
+      ot > 0 ? '残業：' + minsToHM(ot) : '',
+      rec.workContent ? '📋 作業内容：\n' + rec.workContent : '',
+      rec.note ? '📝 ' + rec.note : ''
+    ].filter(Boolean).join('\n');
+  } else {
+    text = [
+      '【業務日報】',
+      '📅 ' + fmtDate(rec.date) + '　' + (rec.weather||''),
+      '',
+      '■ 本日の作業',
+      rec.work || '（なし）',
+      '',
+      '■ 翌日の予定',
+      rec.next || '（なし）',
+      rec.note ? '\n■ 所感\n' + rec.note : '',
+      rec.minutes ? '\n⏱ 作業時間：' + minsToHM(rec.minutes) : ''
+    ].filter(s => s !== undefined).join('\n');
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('クリップボードにコピーしました！LINEに貼り付けてください');
+  }).catch(() => {
+    // フォールバック：テキストエリア経由
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('クリップボードにコピーしました！LINEに貼り付けてください');
+  });
+}
+
+function deleteRecord(type, id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  const key = type === 'att' ? ATT_KEY : REP_KEY;
+  const list = load(key).filter(r => r.id !== id);
+  save(key, list);
+  closeModal();
+  showToast('削除しました');
+  renderHistoryList();
+}
+
+function editRecord(type, id) {
+  closeModal();
+  if (type === 'att') {
+    const rec = load(ATT_KEY).find(r => r.id === id);
+    if (!rec) return;
+    document.getElementById('att-date').value  = rec.date;
+    attStart.value = rec.start || '';
+    attEnd.value   = rec.end   || '';
+    document.getElementById('att-work').value  = rec.workContent || '';
+    document.getElementById('att-note').value  = rec.note || '';
+    updateCalc();
+    switchTab('attendance');
+    showToast('編集モードです。変更後、登録ボタンを押してください');
+  } else {
+    const rec = load(REP_KEY).find(r => r.id === id);
+    if (!rec) return;
+    document.getElementById('rep-date').value    = rec.date;
+    document.getElementById('rep-weather').value = rec.weather || '晴';
+    document.getElementById('rep-work').value    = rec.work || '';
+    document.getElementById('rep-next').value    = rec.next || '';
+    document.getElementById('rep-note').value    = rec.note || '';
+    document.getElementById('rep-minutes').value = rec.minutes || '';
+    switchTab('report');
+    showToast('編集モードです。変更後、登録ボタンを押してください');
+  }
+}
+
+function switchTab(name) {
+  navBtns.forEach(b => { b.classList.toggle('active', b.dataset.tab === name); });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ─────────────────────────────
+// トースト通知
+// ─────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#111;color:#fff;padding:10px 20px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s,transform .2s;z-index:9999;white-space:nowrap;max-width:90vw;text-align:center;pointer-events:none;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2500);
+}
+</script>
+</body>
+</html>
