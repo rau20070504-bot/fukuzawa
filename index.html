@@ -229,20 +229,15 @@
     <div class="tab" id="tab-history">
       <div class="card" style="margin-bottom:12px">
         <div class="card-title" style="margin-bottom:10px">データのバックアップ</div>
-        <button class="btn btn-primary" id="btn-export" style="margin-bottom:10px">
-          📤 バックアップを保存する
-        </button>
+        <p style="font-size:12px;color:var(--gray-500);margin-bottom:10px">保存→LINEやメモに貼り付け、復元時はコピーして読み込む</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-primary btn-sm" id="btn-export" style="flex:1">📤 保存する</button>
+          <button class="btn btn-ghost btn-sm" id="btn-export-copy" style="flex:1">📋 コピーする</button>
+        </div>
         <div style="border-top:1px solid var(--gray-200);padding-top:10px">
           <p style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px">復元する</p>
-          <label class="btn btn-ghost" style="cursor:pointer;margin-bottom:8px">
-            📁 ファイルから読み込む
-            <input type="file" id="btn-import-file" accept=".json" style="display:none">
-          </label>
-          <button class="btn btn-ghost" id="btn-import-text-show" style="color:var(--gray-500)">📋 テキストを貼り付ける</button>
-          <div id="import-text-area" style="display:none;margin-top:8px">
-            <textarea id="import-text" placeholder="バックアップのテキストをここに貼り付けてください" style="width:100%;height:100px;font-size:12px;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px;background:var(--gray-50);font-family:inherit"></textarea>
-            <button class="btn btn-primary btn-sm" id="btn-import-text-do" style="margin-top:6px;width:100%">読み込む</button>
-          </div>
+          <textarea id="import-text" placeholder="バックアップのテキストをここに貼り付けてください" style="width:100%;height:90px;font-size:12px;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px;background:var(--gray-50);font-family:inherit"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-import-text-do" style="margin-top:6px;width:100%">読み込む</button>
         </div>
       </div>
       <div class="filter-row">
@@ -374,13 +369,21 @@ document.getElementById('btn-export').addEventListener('click', async () => {
   showToast('バックアップファイルを保存しました');
 });
 
-document.getElementById('btn-import-text-show').addEventListener('click', () => {
-  const area = document.getElementById('import-text-area');
-  area.style.display = area.style.display === 'none' ? 'block' : 'none';
+document.getElementById('btn-export-copy').addEventListener('click', () => {
+  const data = { att: load(ATT_KEY), rep: load(REP_KEY), name: loadName(), exportedAt: new Date().toISOString() };
+  const text = JSON.stringify(data);
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('クリップボードにコピーしました。LINEやメモに貼り付けて保存してください');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('クリップボードにコピーしました。LINEやメモに貼り付けて保存してください');
+  });
 });
 
-document.getElementById('btn-import-text-do').addEventListener('click', () => {
-  const text = document.getElementById('import-text').value.trim();
+function importFromText(text) {
   if (!text) return;
   try {
     const data = JSON.parse(text);
@@ -393,33 +396,13 @@ document.getElementById('btn-import-text-do').addEventListener('click', () => {
       document.getElementById('header-name').textContent = data.name || '名前を設定';
     }
     document.getElementById('import-text').value = '';
-    document.getElementById('import-text-area').style.display = 'none';
     showToast('バックアップを読み込みました');
     renderHistory();
   } catch { alert('テキストが正しくありません。'); }
-});
+}
 
-document.getElementById('btn-import-file').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      if (!data.att && !data.rep) { alert('正しいバックアップファイルではありません。'); return; }
-      if (!confirm(`バックアップを読み込みます。\n現在のデータは上書きされます。よろしいですか？`)) return;
-      if (data.att) save(ATT_KEY, data.att);
-      if (data.rep) save(REP_KEY, data.rep);
-      if (data.name !== undefined) {
-        saveName(data.name);
-        document.getElementById('header-name').textContent = data.name || '名前を設定';
-      }
-      showToast('バックアップを読み込みました');
-      renderHistory();
-    } catch { alert('ファイルの読み込みに失敗しました。'); }
-    e.target.value = '';
-  };
-  reader.readAsText(file);
+document.getElementById('btn-import-text-do').addEventListener('click', () => {
+  importFromText(document.getElementById('import-text').value.trim());
 });
 const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
