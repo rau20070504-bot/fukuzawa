@@ -140,7 +140,13 @@
 <div id="app">
   <div id="header">
     <h1>業務管理</h1>
-    <p id="header-date"></p>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+      <p id="header-date" style="font-size:12px;opacity:.8"></p>
+      <div id="header-name-wrap" onclick="editName()" style="font-size:12px;opacity:.9;cursor:pointer;display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:999px;padding:3px 10px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="header-name">名前を設定</span>
+      </div>
+    </div>
   </div>
 
   <div id="main">
@@ -307,9 +313,27 @@ function calcWork(start, end, breakMin) {
 // ─────────────────────────────
 // ストレージ
 // ─────────────────────────────
-const ATT_KEY = 'fukuzawa_attendance';
-const REP_KEY = 'fukuzawa_report';
+const ATT_KEY  = 'fukuzawa_attendance';
+const REP_KEY  = 'fukuzawa_report';
+const NAME_KEY = 'fukuzawa_name';
 const load = key => JSON.parse(localStorage.getItem(key) || '[]');
+
+function loadName() { return localStorage.getItem(NAME_KEY) || ''; }
+function saveName(n) { localStorage.setItem(NAME_KEY, n); }
+
+function editName() {
+  const cur = loadName();
+  const n = prompt('お名前を入力してください', cur);
+  if (n === null) return;
+  const trimmed = n.trim();
+  saveName(trimmed);
+  document.getElementById('header-name').textContent = trimmed || '名前を設定';
+}
+
+(function initName() {
+  const n = loadName();
+  document.getElementById('header-name').textContent = n || '名前を設定';
+})();
 
 // ─────────────────────────────
 // エクスポート / インポート
@@ -563,9 +587,11 @@ function buildMonthlyText(month) {
   const totalWork = attAll.reduce((s,r)=>s+(r.work||0),0);
   const totalOT   = attAll.reduce((s,r)=>s+Math.max(0,(r.work||0)-480),0);
 
+  const name = loadName();
   const lines = [];
   lines.push('━━━━━━━━━━━━━━━━');
   lines.push(`📊 ${y}年${m}月 月次レポート`);
+  if (name) lines.push(`氏名：${name}`);
   lines.push('━━━━━━━━━━━━━━━━');
   lines.push(`出勤日数　：${totalDays}日`);
   lines.push(`総実働時間：${minsToHM(totalWork)}`);
@@ -667,6 +693,7 @@ function generateMonthlyPDF(month) {
 
   const lineText = encodeURIComponent(buildMonthlyText(month));
 
+  const name = loadName();
   const html = `<!DOCTYPE html><html lang="ja"><head>
 <meta charset="UTF-8">
 <title>${y}年${m}月 月次レポート</title>
@@ -692,7 +719,7 @@ function generateMonthlyPDF(month) {
 </style>
 </head><body>
 <h1>📊 ${y}年${m}月 月次レポート</h1>
-<p class="meta">作成日：${fmtDate(today())}</p>
+<p class="meta">${name ? '氏名：' + name + '　／　' : ''}作成日：${fmtDate(today())}</p>
 <div class="summary">
   <div class="s-item"><span>出勤日数</span><strong>${totalDays}日</strong></div>
   <div class="s-item"><span>総実働時間</span><strong>${minsToHM(totalWork)}</strong></div>
