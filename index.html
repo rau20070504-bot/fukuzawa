@@ -414,7 +414,6 @@ document.getElementById('att-date').value = today();
 
 const attStart = document.getElementById('att-start');
 const attEnd   = document.getElementById('att-end');
-const attBreak = document.getElementById('att-break');
 const attCalc  = document.getElementById('att-calc');
 const attWorkD = document.getElementById('att-work-display');
 const attOtD   = document.getElementById('att-ot-display');
@@ -883,7 +882,6 @@ function editRecord(type, id) {
     const rec = load(REP_KEY).find(r => r.id === id);
     if (!rec) return;
     document.getElementById('rep-date').value    = rec.date;
-    document.getElementById('rep-weather').value = rec.weather || '晴';
     document.getElementById('rep-work').value    = rec.work || '';
     document.getElementById('rep-next').value    = rec.next || '';
     document.getElementById('rep-note').value    = rec.note || '';
