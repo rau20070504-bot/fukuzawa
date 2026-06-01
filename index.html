@@ -173,6 +173,10 @@
               <input type="time" id="att-end">
             </div>
           </div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <button type="button" class="btn btn-ghost btn-sm" style="flex:1" onclick="setShift('08:00','17:00')">8:00〜17:00</button>
+            <button type="button" class="btn btn-ghost btn-sm" style="flex:1" onclick="setShift('09:00','18:00')">9:00〜18:00</button>
+          </div>
 
           <div class="calc-box" id="att-calc" style="display:none">
             <div class="calc-item"><span>実働時間</span><strong id="att-work-display">—</strong></div>
@@ -436,6 +440,12 @@ const attEnd   = document.getElementById('att-end');
 const attCalc  = document.getElementById('att-calc');
 const attWorkD = document.getElementById('att-work-display');
 const attOtD   = document.getElementById('att-ot-display');
+
+function setShift(start, end) {
+  attStart.value = start;
+  attEnd.value = end;
+  updateCalc();
+}
 
 function updateCalc() {
   const work = calcWork(attStart.value, attEnd.value, 0);
