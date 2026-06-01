@@ -302,14 +302,21 @@ const fmtTime = t => t || '—';
 const pad = n => String(n).padStart(2,'0');
 const minsToHM = m => m == null || m < 0 ? '—' : `${Math.floor(m/60)}時間${pad(m%60)}分`;
 
-function calcWork(start, end, breakMin) {
+function autoBreak(start, end) {
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  let total = (eh*60+em) - (sh*60+sm);
+  if (total < 0) total += 24*60;
+  return total > 6*60 ? 60 : 0; // 6時間超は休憩60分
+}
+
+function calcWork(start, end) {
   if (!start || !end) return null;
   const [sh,sm] = start.split(':').map(Number);
   const [eh,em] = end.split(':').map(Number);
   let total = (eh*60+em) - (sh*60+sm);
-  if (total < 0) total += 24*60; // 日跨ぎ
-  const work = total - (breakMin || 0);
-  return work;
+  if (total < 0) total += 24*60;
+  return total - autoBreak(start, end);
 }
 
 // ─────────────────────────────
@@ -448,7 +455,7 @@ function setShift(start, end) {
 }
 
 function updateCalc() {
-  const work = calcWork(attStart.value, attEnd.value, 0);
+  const work = calcWork(attStart.value, attEnd.value);
   if (work !== null) {
     attCalc.style.display = 'flex';
     attWorkD.textContent = minsToHM(work);
@@ -473,7 +480,7 @@ document.getElementById('form-attendance').addEventListener('submit', e => {
     end: attEnd.value,
     workContent: document.getElementById('att-work').value.trim(),
     note: document.getElementById('att-note').value.trim(),
-    work: calcWork(attStart.value, attEnd.value, 0)
+    work: calcWork(attStart.value, attEnd.value)
   };
   if (existing >= 0) {
     if (!confirm('この日の出勤記録が既にあります。上書きしますか？')) return;
