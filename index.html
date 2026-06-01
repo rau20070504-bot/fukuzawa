@@ -229,18 +229,20 @@
     <div class="tab" id="tab-history">
       <div class="card" style="margin-bottom:12px">
         <div class="card-title" style="margin-bottom:10px">データのバックアップ</div>
-        <p style="font-size:12px;color:var(--gray-500);margin-bottom:10px">機種変更や引き継ぎ時に使用してください</p>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <button class="btn btn-ghost btn-sm" id="btn-export" style="flex:1">⬇️ ファイルに保存</button>
-          <label class="btn btn-ghost btn-sm" style="flex:1;cursor:pointer">
-            ⬆️ ファイルを読み込む
+        <button class="btn btn-primary" id="btn-export" style="margin-bottom:10px">
+          📤 バックアップを保存する
+        </button>
+        <div style="border-top:1px solid var(--gray-200);padding-top:10px">
+          <p style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px">復元する</p>
+          <label class="btn btn-ghost" style="cursor:pointer;margin-bottom:8px">
+            📁 ファイルから読み込む
             <input type="file" id="btn-import-file" accept=".json" style="display:none">
           </label>
-        </div>
-        <button class="btn btn-ghost btn-sm" id="btn-import-text-show" style="width:100%;color:var(--gray-500)">📋 テキストを貼り付けて読み込む</button>
-        <div id="import-text-area" style="display:none;margin-top:8px">
-          <textarea id="import-text" placeholder="バックアップのテキストをここに貼り付けてください" style="width:100%;height:100px;font-size:12px;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px;background:var(--gray-50);font-family:inherit"></textarea>
-          <button class="btn btn-primary btn-sm" id="btn-import-text-do" style="margin-top:6px;width:100%">読み込む</button>
+          <button class="btn btn-ghost" id="btn-import-text-show" style="color:var(--gray-500)">📋 テキストを貼り付ける</button>
+          <div id="import-text-area" style="display:none;margin-top:8px">
+            <textarea id="import-text" placeholder="バックアップのテキストをここに貼り付けてください" style="width:100%;height:100px;font-size:12px;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px;background:var(--gray-50);font-family:inherit"></textarea>
+            <button class="btn btn-primary btn-sm" id="btn-import-text-do" style="margin-top:6px;width:100%">読み込む</button>
+          </div>
         </div>
       </div>
       <div class="filter-row">
@@ -339,15 +341,34 @@ function editName() {
 // ─────────────────────────────
 // エクスポート / インポート
 // ─────────────────────────────
-document.getElementById('btn-export').addEventListener('click', () => {
+document.getElementById('btn-export').addEventListener('click', async () => {
   const data = { att: load(ATT_KEY), rep: load(REP_KEY), name: loadName(), exportedAt: new Date().toISOString() };
   const text = JSON.stringify(data, null, 2);
-  const blob = new Blob([text], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
   const date = new Date().toISOString().slice(0, 10);
+  const fileName = `gyomu-backup-${date}.json`;
+
+  // iPhoneなどではネイティブ共有シートを使う
+  if (navigator.share) {
+    try {
+      const file = new File([text], fileName, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: '業務管理バックアップ' });
+        return;
+      }
+      // ファイル共有非対応の場合はテキストで共有
+      await navigator.share({ text, title: fileName });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // キャンセル
+    }
+  }
+
+  // PC向けフォールバック：ファイルダウンロード
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `gyomu-backup-${date}.json`;
+  a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
   showToast('バックアップファイルを保存しました');
