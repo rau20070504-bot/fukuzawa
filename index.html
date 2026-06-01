@@ -229,17 +229,15 @@
     <div class="tab" id="tab-history">
       <div class="card" style="margin-bottom:12px">
         <div class="card-title" style="margin-bottom:10px">データのバックアップ</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <button class="btn btn-ghost btn-sm" id="btn-export" style="flex:1">書き出す</button>
-          <button class="btn btn-ghost btn-sm" id="btn-import-show" style="flex:1">読み込む</button>
-        </div>
-        <div id="export-area" style="display:none">
-          <textarea id="export-text" style="width:100%;height:80px;font-size:12px;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px;background:var(--gray-50)" readonly></textarea>
-          <button class="btn btn-primary btn-sm" id="btn-copy" style="margin-top:6px;width:100%">コピーする</button>
-        </div>
-        <div id="import-area" style="display:none">
-          <textarea id="import-text" placeholder="バックアップのテキストを貼り付けてください" style="width:100%;height:80px;font-size:12px;border:1.5px solid var(--gray-300);border-radius:8px;padding:8px;background:var(--gray-50)"></textarea>
-          <button class="btn btn-primary btn-sm" id="btn-import-do" style="margin-top:6px;width:100%">読み込む</button>
+        <p style="font-size:12px;color:var(--gray-500);margin-bottom:10px">機種変更や引き継ぎ時に使用してください</p>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" id="btn-export" style="flex:1">
+            ⬇️ ファイルに保存
+          </button>
+          <label class="btn btn-ghost btn-sm" style="flex:1;cursor:pointer">
+            ⬆️ ファイルを読み込む
+            <input type="file" id="btn-import-file" accept=".json" style="display:none">
+          </label>
         </div>
       </div>
       <div class="filter-row">
@@ -340,50 +338,39 @@ function editName() {
 // ─────────────────────────────
 document.getElementById('btn-export').addEventListener('click', () => {
   const data = { att: load(ATT_KEY), rep: load(REP_KEY), name: loadName(), exportedAt: new Date().toISOString() };
-  const text = JSON.stringify(data);
-  const area = document.getElementById('export-area');
-  const importArea = document.getElementById('import-area');
-  importArea.style.display = 'none';
-  area.style.display = area.style.display === 'none' ? 'block' : 'none';
-  document.getElementById('export-text').value = text;
+  const text = JSON.stringify(data, null, 2);
+  const blob = new Blob([text], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0, 10);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gyomu-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('バックアップファイルを保存しました');
 });
 
-document.getElementById('btn-copy').addEventListener('click', () => {
-  const t = document.getElementById('export-text');
-  t.select();
-  navigator.clipboard.writeText(t.value).then(() => {
-    document.getElementById('btn-copy').textContent = 'コピーしました！';
-    setTimeout(() => document.getElementById('btn-copy').textContent = 'コピーする', 2000);
-  }).catch(() => {
-    document.execCommand('copy');
-    document.getElementById('btn-copy').textContent = 'コピーしました！';
-    setTimeout(() => document.getElementById('btn-copy').textContent = 'コピーする', 2000);
-  });
-});
-
-document.getElementById('btn-import-show').addEventListener('click', () => {
-  const area = document.getElementById('import-area');
-  const exportArea = document.getElementById('export-area');
-  exportArea.style.display = 'none';
-  area.style.display = area.style.display === 'none' ? 'block' : 'none';
-});
-
-document.getElementById('btn-import-do').addEventListener('click', () => {
-  const text = document.getElementById('import-text').value.trim();
-  if (!text) return;
-  try {
-    const data = JSON.parse(text);
-    if (data.att) save(ATT_KEY, data.att);
-    if (data.rep) save(REP_KEY, data.rep);
-    if (data.name !== undefined) {
-      saveName(data.name);
-      document.getElementById('header-name').textContent = data.name || '名前を設定';
-    }
-    alert('読み込みが完了しました。');
-    document.getElementById('import-area').style.display = 'none';
-    document.getElementById('import-text').value = '';
-    renderHistory();
-  } catch { alert('テキストが正しくありません。'); }
+document.getElementById('btn-import-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.att && !data.rep) { alert('正しいバックアップファイルではありません。'); return; }
+      if (!confirm(`バックアップを読み込みます。\n現在のデータは上書きされます。よろしいですか？`)) return;
+      if (data.att) save(ATT_KEY, data.att);
+      if (data.rep) save(REP_KEY, data.rep);
+      if (data.name !== undefined) {
+        saveName(data.name);
+        document.getElementById('header-name').textContent = data.name || '名前を設定';
+      }
+      showToast('バックアップを読み込みました');
+      renderHistory();
+    } catch { alert('ファイルの読み込みに失敗しました。'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 });
 const save = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
