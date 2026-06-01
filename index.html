@@ -339,7 +339,7 @@ function editName() {
 // エクスポート / インポート
 // ─────────────────────────────
 document.getElementById('btn-export').addEventListener('click', () => {
-  const data = { att: load(ATT_KEY), rep: load(REP_KEY), exportedAt: new Date().toISOString() };
+  const data = { att: load(ATT_KEY), rep: load(REP_KEY), name: loadName(), exportedAt: new Date().toISOString() };
   const text = JSON.stringify(data);
   const area = document.getElementById('export-area');
   const importArea = document.getElementById('import-area');
@@ -375,6 +375,10 @@ document.getElementById('btn-import-do').addEventListener('click', () => {
     const data = JSON.parse(text);
     if (data.att) save(ATT_KEY, data.att);
     if (data.rep) save(REP_KEY, data.rep);
+    if (data.name !== undefined) {
+      saveName(data.name);
+      document.getElementById('header-name').textContent = data.name || '名前を設定';
+    }
     alert('読み込みが完了しました。');
     document.getElementById('import-area').style.display = 'none';
     document.getElementById('import-text').value = '';
